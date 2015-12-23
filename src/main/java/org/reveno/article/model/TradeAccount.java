@@ -39,7 +39,7 @@ public class TradeAccount {
     }
 
     public LongCollection orders() {
-        return orders;
+        return new LongOpenHashSet(orders);
     }
 
 }

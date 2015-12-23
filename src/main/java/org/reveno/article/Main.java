@@ -121,18 +121,22 @@ public class Main {
     protected static void declareTransactions(Reveno reveno) {
         reveno.domain().transactionAction(CreateAccount.CreateAccountAction.class, (a, ctx) ->
                 ctx.repo().store(a.id, new TradeAccount(a.id, a.info.currency)));
+
         reveno.domain().transactionAction(ChangeBalance.class, (a, ctx) ->
                 ctx.repo().store(a.accountId,
                         ctx.repo().get(TradeAccount.class, a.accountId).addBalance(a.amount)));
+
         reveno.domain().transactionAction(MakeOrder.MakeOrderAction.class, (a, ctx) -> {
             Order order = new Order(a.id, a.command.accountId, a.command.symbol, a.command.size, a.price);
             ctx.repo().store(a.id, order);
             ctx.repo().store(a.command.accountId, ctx.repo().get(TradeAccount.class, a.command.accountId).addOrder(a.id));
         });
+
         reveno.domain().transactionAction(CancellOrder.class, (a, ctx) -> {
             Order order = ctx.repo().remove(Order.class, a.orderId);
             ctx.repo().store(order.accountId, ctx.repo().get(TradeAccount.class, order.accountId).removeOrder(a.orderId));
         });
+
         reveno.domain().transactionAction(AdjustOrder.AdjustOrderAction.class, (a, ctx) ->
                 ctx.repo().store(a.cmd.orderId,
                         ctx.repo().get(Order.class, a.cmd.orderId).adjust(a.cmd.newSize, a.newPrice)));
