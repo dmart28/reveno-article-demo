@@ -27,11 +27,13 @@ public class TradeAccount {
     }
 
     public TradeAccount addOrder(long orderId) {
+        LongSet orders = new LongOpenHashSet(this.orders);
         orders.add(orderId);
         return new TradeAccount(id, balance, currency, orders);
     }
 
     public TradeAccount removeOrder(long orderId) {
+        LongSet orders = new LongOpenHashSet(this.orders);
         orders.remove(orderId);
         return new TradeAccount(id, balance, currency, orders);
     }

@@ -8,8 +8,9 @@ import org.reveno.article.view.TradeAccountView;
 import org.reveno.atp.api.Reveno;
 import org.reveno.atp.core.Engine;
 
+import static org.reveno.article.Utils.*;
+
 public class Main {
-    private static final long DECIMAL_POWER = (long) Math.pow(10, 6);
 
     public static void main(String[] args) {
         Reveno reveno = new Engine(args[0]);
@@ -29,14 +30,29 @@ public class Main {
         reveno.startup();
 
         long accountId = reveno.executeSync(new CreateAccount("USD", 5.15));
-        long orderId = reveno.executeSync(new MakeOrder(accountId, "EUR/USD", 1, 3.145));
+        long orderId = reveno.executeSync(new MakeOrder(accountId, "EUR/USD", 1, 1.213));
 
         // circular dynamic view references works this way
+        // the balance is expected to be 5.15
         System.out.println(reveno.query().find(TradeAccountView.class, accountId).orders.iterator().next().account.balance);
 
         reveno.executeSync(new ExecuteOrder(orderId));
 
+        // the balance is expected to be 8.295, after order successfully executed
         System.out.println(reveno.query().find(TradeAccountView.class, accountId).balance);
+
+        long orderId1 = reveno.executeSync(new MakeOrder(accountId, "RUB/GPB", 3, 0.0096));
+        long orderId2 = reveno.executeSync(new MakeOrder(accountId, "EUR/USD", 1, 1.314));
+
+        // expected to have 2 orders
+        System.out.println(reveno.query().find(TradeAccountView.class, accountId).orders.size());
+
+        reveno.executeSync(new CancellOrder(orderId1));
+
+        // expected to have null, as we already cancelled this order
+        System.out.println(reveno.query().find(OrderView.class, orderId1));
+        // expected to have 1.314 for second order
+        System.out.println(reveno.query().find(OrderView.class, orderId2).price);
 
         reveno.shutdown();
     }
@@ -122,26 +138,4 @@ public class Main {
                         ctx.repo().get(Order.class, a.cmd.orderId).adjust(a.cmd.newSize, a.newPrice)));
     }
 
-    protected static long toLong(double value) {
-        return (long)(value * DECIMAL_POWER);
-    }
-
-    protected static double fromLong(long value) {
-        return (double)value / DECIMAL_POWER;
-    }
-
-    protected static boolean eq(double a, double b) {
-        final double epsilon = 1 / DECIMAL_POWER;
-        final double absA = Math.abs(a);
-        final double absB = Math.abs(b);
-        final double diff = Math.abs(a - b);
-
-        if (a == b) {
-            return true;
-        } else if (a == 0 || b == 0 || diff < Double.MIN_NORMAL) {
-            return diff < (epsilon * Double.MIN_NORMAL);
-        } else {
-            return diff / (absA + absB) < epsilon;
-        }
-    }
 }
