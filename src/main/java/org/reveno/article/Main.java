@@ -38,7 +38,7 @@ public class Main {
 
         reveno.executeSync(new ExecuteOrder(orderId));
 
-        // the balance is expected to be 8.295, after order successfully executed
+        // the balance is expected to be 3.937, after order successfully executed
         System.out.println(reveno.query().find(TradeAccountView.class, accountId).balance);
 
         long orderId1 = reveno.executeSync(new MakeOrder(accountId, "RUB/GPB", 3, 0.0096));
@@ -110,7 +110,7 @@ public class Main {
         reveno.domain().command(ExecuteOrder.class, (c, ctx) -> {
             if (ctx.repo().has(Order.class, c.orderId)) {
                 Order order = ctx.repo().get(Order.class, c.orderId);
-                ctx.executeTransaction(new ChangeBalance(order.accountId, order.price));
+                ctx.executeTransaction(new ChangeBalance(order.accountId, -order.price));
                 ctx.executeTransaction(new CancellOrder(c.orderId));
             } else {
                 throw new IllegalArgumentException("Order with id=" + c.orderId + " not found.");
