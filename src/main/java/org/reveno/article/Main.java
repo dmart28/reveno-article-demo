@@ -1,6 +1,7 @@
 package org.reveno.article;
 
 import org.reveno.article.commands.*;
+import org.reveno.article.events.BalanceChangedEvent;
 import org.reveno.article.model.Order;
 import org.reveno.article.model.TradeAccount;
 import org.reveno.article.view.OrderView;
@@ -26,6 +27,13 @@ public class Main {
                 new TradeAccountView(fromLong(e.balance), r.linkSet(e.orders(), OrderView.class)));
         reveno.domain().viewMapper(Order.class, OrderView.class, (id,e,r) ->
                 new OrderView(fromLong(e.price), e.size, e.symbol, r.get(TradeAccountView.class, e.accountId)));
+
+        reveno.events().eventHandler(BalanceChangedEvent.class, (e, m) -> {
+            if (!m.isRestore()) {
+                TradeAccountView account = reveno.query().find(TradeAccountView.class, e.accountId);
+                System.out.println(String.format("New balance of account %s from event is: %s", e.accountId, account.balance));
+            }
+        });
 
         reveno.startup();
 
@@ -122,9 +130,11 @@ public class Main {
         reveno.domain().transactionAction(CreateAccount.CreateAccountAction.class, (a, ctx) ->
                 ctx.repo().store(a.id, new TradeAccount(a.id, a.info.currency)));
 
-        reveno.domain().transactionAction(ChangeBalance.class, (a, ctx) ->
+        reveno.domain().transactionAction(ChangeBalance.class, (a, ctx) -> {
                 ctx.repo().store(a.accountId,
-                        ctx.repo().get(TradeAccount.class, a.accountId).addBalance(a.amount)));
+                        ctx.repo().get(TradeAccount.class, a.accountId).addBalance(a.amount));
+                ctx.eventBus().publishEvent(new BalanceChangedEvent(a.accountId));
+        });
 
         reveno.domain().transactionAction(MakeOrder.MakeOrderAction.class, (a, ctx) -> {
             Order order = new Order(a.id, a.command.accountId, a.command.symbol, a.command.size, a.price);
