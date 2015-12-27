@@ -6,15 +6,19 @@ import org.reveno.article.model.Order;
 import org.reveno.article.model.TradeAccount;
 import org.reveno.article.view.OrderView;
 import org.reveno.article.view.TradeAccountView;
+import org.reveno.atp.api.Configuration;
 import org.reveno.atp.api.Reveno;
 import org.reveno.atp.core.Engine;
+import org.reveno.atp.metrics.RevenoMetrics;
+import org.reveno.atp.utils.MeasureUtils;
 
 import static org.reveno.article.Utils.*;
 
 public class Main {
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws InterruptedException {
         Reveno reveno = new Engine(args[0]);
+        reveno.config().cpuConsumption(Configuration.CpuConsumption.HIGH);
 
         // Commands declarations
         declareCommands(reveno);
@@ -61,6 +65,23 @@ public class Main {
         System.out.println(reveno.query().find(OrderView.class, orderId1));
         // expected to have 1.314 for second order
         System.out.println(reveno.query().find(OrderView.class, orderId2).price);
+
+        //RevenoMetrics metrics = new RevenoMetrics();
+        //metrics.config().sendToLog(true);
+        //metrics.config().hostName("localhost");
+        //metrics.config().instanceName("test");
+        //metrics.listen((Engine) reveno);
+
+        //metrics.config().metricBufferSize(MeasureUtils.mb(2));
+
+        //Object command = new ChangeBalance(accountId, 10);
+        //for (int i = 0; i < 45; i++) {
+        //    for (int j = 0; j < 1_000_000; j++) {
+        //        reveno.executeCommand(command);
+        //    }
+        //}
+        //// just to see last results since metrics sends to sink every 15 seconds by default.
+        //Thread.sleep(15_000);
 
         reveno.shutdown();
     }
@@ -133,7 +154,7 @@ public class Main {
         reveno.domain().transactionAction(ChangeBalance.class, (a, ctx) -> {
                 ctx.repo().store(a.accountId,
                         ctx.repo().get(TradeAccount.class, a.accountId).addBalance(a.amount));
-                ctx.eventBus().publishEvent(new BalanceChangedEvent(a.accountId));
+                //ctx.eventBus().publishEvent(new BalanceChangedEvent(a.accountId));
         });
 
         reveno.domain().transactionAction(MakeOrder.MakeOrderAction.class, (a, ctx) -> {
